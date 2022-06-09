@@ -1,116 +1,136 @@
-// import '@typechain/hardhat';
-import '@typechain/hardhat';
-import '@nomiclabs/hardhat-waffle';
-import '@nomiclabs/hardhat-etherscan';
-import '@nomiclabs/hardhat-ethers';
-import 'hardhat-gas-reporter';
 import 'dotenv/config';
-import 'solidity-coverage';
+import '@typechain/hardhat';
+import '@nomiclabs/hardhat-ethers';
+import '@nomiclabs/hardhat-etherscan';
+import '@nomiclabs/hardhat-waffle';
 import 'hardhat-deploy';
+import 'hardhat-watcher';
+import 'hardhat-gas-reporter';
+import 'solidity-coverage';
+// import { removeConsoleLog } from 'hardhat-preprocessor';
+// import { HardhatUserConfig } from 'hardhat/config';
 import { HardhatUserConfig } from 'hardhat/config';
+import type { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL || '';
-const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL || '';
-const KOVAN_RPC_URL = process.env.KOVAN_RPC_URL || '';
-const POLYGON_MAINNET_RPC_URL =
-  process.env.POLYGON_MAINNET_RPC_URL ||
-  'https://polygon-mainnet.alchemyapi.io/v2/your-api-key';
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-// optional
+const accounts = {
+  mneumonic: process.env.MNEUMONIC || '',
+};
 
-// Your API key for Etherscan, obtain one at https://etherscan.io/
-const ETHERSCAN_API_KEY =
-  process.env.ETHERSCAN_API_KEY || 'Your etherscan API key';
-const POLYGONSCAN_API_KEY =
-  process.env.POLYGONSCAN_API_KEY || 'Your polygonscan API key';
-const REPORT_GAS = process.env.REPORT_GAS || false;
+const namedAccounts = {
+  deployer: {
+    default: 0,
+  },
+  admin: {
+    default: 1,
+  },
+  dev: {
+    default: 2,
+  },
+  owner: {
+    default: 3,
+  },
+  wallet: {
+    default: 4,
+  },
+  beneficiary1: {
+    default: 5,
+  },
+  beneficiary2: {
+    default: 6,
+  },
+  user: {
+    default: 7,
+  },
+};
+
+export type Signers = {
+  [name in keyof typeof namedAccounts]: SignerWithAddress;
+};
 
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
-  networks: {
-    hardhat: {
-      // // If you want to do some forking, uncomment this
-      // forking: {
-      //   url: MAINNET_RPC_URL
-      // }
-      chainId: 31337,
-    },
-    localhost: {
-      chainId: 31337,
-    },
-    kovan: {
-      url: KOVAN_RPC_URL,
-      accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
-      //accounts: {
-      //     mnemonic: MNEMONIC,
-      // },
-      saveDeployments: true,
-      chainId: 42,
-    },
-    rinkeby: {
-      url: RINKEBY_RPC_URL,
-      accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
-      //   accounts: {
-      //     mnemonic: MNEMONIC,
-      //   },
-      saveDeployments: true,
-      chainId: 4,
-    },
-    mainnet: {
-      url: MAINNET_RPC_URL,
-      accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
-      //   accounts: {
-      //     mnemonic: MNEMONIC,
-      //   },
-      saveDeployments: true,
-      chainId: 1,
-    },
-    polygon: {
-      url: POLYGON_MAINNET_RPC_URL,
-      accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
-      saveDeployments: true,
-      chainId: 137,
-    },
-  },
   etherscan: {
-    // npx hardhat verify --network <NETWORK> <CONTRACT_ADDRESS> <CONSTRUCTOR_PARAMETERS>
-    apiKey: {
-      rinkeby: ETHERSCAN_API_KEY,
-      kovan: ETHERSCAN_API_KEY,
-      polygon: POLYGONSCAN_API_KEY,
-    },
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
   gasReporter: {
-    enabled: false,
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
     currency: 'USD',
-    outputFile: 'gas-report.txt',
-    noColors: true,
-    // coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    enabled: process.env.REPORT_GAS === 'true',
   },
-  namedAccounts: {
-    deployer: {
-      default: 0, // here this will by default take the first account as deployer
-      1: 0, // similarly on mainnet it will take the first account as deployer. Note though that depending on how hardhat network are configured, the account 0 on one network can be different than on another
+  namedAccounts,
+  networks: {
+    ethereum_mainnet: {
+      url: process.env.MAINNET_RPC_URL,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      chainId: 1,
     },
-    player: {
-      default: 1,
+    localhost: {
+      live: false,
+      saveDeployments: true,
+      tags: ['local'],
+    },
+    hardhat: {
+      forking: {
+        enabled: process.env.FORKING === 'true',
+        url: process.env.MAINNET_RPC_URL || '',
+      },
+      live: false,
+      saveDeployments: true,
+      tags: ['test', 'local'],
+      gasPrice: 0,
+      initialBaseFeePerGas: 0,
+    },
+    rinkeby: {
+      url: process.env.RINKEBY_RPC_URL || '',
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      chainId: 4,
+      live: true,
+      saveDeployments: true,
+      tags: ['staging'],
+      gasMultiplier: 15,
+    },
+    kovan: {
+      url: process.env.KOVAN_RPC_URL,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      chainId: 42,
+      live: true,
+      saveDeployments: true,
+      tags: ['staging'],
+      gasMultiplier: 10,
+    },
+    polygon: {
+      url: process.env.POLYGON_MAINNET_RPC_URL,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      chainId: 137,
+      live: true,
+      saveDeployments: true,
+      gasMultiplier: 2,
+    },
+    aurora: {
+      url: 'https://mainnet.aurora.dev',
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      chainId: 1313161554,
+      live: true,
+      saveDeployments: true,
     },
   },
   solidity: {
-    compilers: [
-      {
-        version: '0.8.8',
+    version: '0.6.12',
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
       },
-      {
-        version: '0.4.24',
-      },
-      {
-        version: '0.6.12',
-      },
-    ],
+    },
   },
-  mocha: {
-    timeout: 200000, // 200 seconds max for running tests
+  typechain: {
+    outDir: 'typechain',
+    target: 'ethers-v5',
   },
 };
 
